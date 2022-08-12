@@ -308,7 +308,7 @@ async function run() {
 }
 run().catch(console.dir);
 app.use(cors());
-app.use(express.json()); //middleware
+app.use(express.json());
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });

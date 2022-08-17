@@ -5,8 +5,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 require("dotenv").config();
 
-const uri =
-  `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.8nji2fr.mongodb.net/?retryWrites=true&w=majority`;
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.8nji2fr.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -51,14 +50,14 @@ async function run() {
       const posts = await postsCollection.find(query).toArray();
       res.send(posts);
     });
-    // get posts by friends array 
+    // get posts by friends array
     app.get("/postsByFriends/:friends", async (req, res) => {
       const friends = req.params.friends;
       const friendsArray = friends.split(",");
       const query = { userEmail: { $in: friendsArray } };
       const posts = await postsCollection.find(query).toArray();
       res.send(posts);
-    })
+    });
     //update all posts userImage
     app.put("/updatePostUserImage/:email", async (req, res) => {
       const email = req.params.email;
@@ -66,7 +65,7 @@ async function run() {
       const updateDoc = { $set: { userImage: req.body.userImage } };
       const result = await postsCollection.updateMany(filter, updateDoc);
       res.send(result);
-    })
+    });
     //update all posts userName
     app.put("/updatePostUserName/:email", async (req, res) => {
       const email = req.params.email;
@@ -74,16 +73,14 @@ async function run() {
       const updateDoc = { $set: { userName: req.body.userName } };
       const result = await postsCollection.updateMany(filter, updateDoc);
       res.send(result);
-    })
+    });
     //get post by id
     app.get("/post/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const post = await postsCollection.findOne(query);
       res.send(post);
-    })
-
-
+    });
 
     //...................get api for users...........//
     app.get("/users", async (req, res) => {
@@ -111,7 +108,7 @@ async function run() {
       const user = req.body;
       const result = await usersCollection.updateOne(query, { $set: user });
       res.send(result);
-    })
+    });
     // show user all friends by friends array
     app.get("/user/:email/friends", async (req, res) => {
       const email = req.params.email;
@@ -122,35 +119,32 @@ async function run() {
       const users = await usersCollection.find(query2).toArray();
       res.send(users);
     }),
-
-
-
-    //post a group
-    app.post("/group", async (req, res) => {
-      const group = req.body;
-      const result = await groupsCollection.insertOne(group);
-      res.send(result);
-    })
+      //post a group
+      app.post("/group", async (req, res) => {
+        const group = req.body;
+        const result = await groupsCollection.insertOne(group);
+        res.send(result);
+      });
     // get group by creatorEmail
     app.get("/groups/:creatorEmail", async (req, res) => {
       const creatorEmail = req.params.creatorEmail;
       const query = { groupCreatorEmail: creatorEmail };
       const groups = await groupsCollection.find(query).toArray();
       res.send(groups);
-    })
+    });
     // get all groups
     app.get("/groups", async (req, res) => {
       const query = {};
       const groups = await groupsCollection.find(query).toArray();
       res.send(groups);
-    })
+    });
     //get single group by groupSlug
     app.get("/groupBySlug/:groupSlug", async (req, res) => {
       const groupSlug = req.params.groupSlug;
       const query = { groupSlug: groupSlug };
       const group = await groupsCollection.findOne(query);
       res.send(group);
-    })
+    });
     //post to group
     app.post("/group/:groupSlug", async (req, res) => {
       const groupSlug = req.params.groupSlug;
@@ -160,14 +154,14 @@ async function run() {
       group.groupPosts.push(post);
       const result = await groupsCollection.updateOne(query, { $set: group });
       res.send(result);
-    })
+    });
     //get group posts by groupSlug
     app.get("/group/:groupSlug/posts", async (req, res) => {
       const groupSlug = req.params.groupSlug;
       const query = { groupSlug: groupSlug };
       const group = await groupsCollection.findOne(query);
       res.send(group.groupPosts);
-    })
+    });
     //push member to group
     app.put("/group/:groupSlug/pushMember", async (req, res) => {
       const groupSlug = req.params.groupSlug;
@@ -177,7 +171,7 @@ async function run() {
       group.groupMembers.push(member);
       const result = await groupsCollection.updateOne(query, { $set: group });
       res.send(result);
-    })
+    });
     //update group coverPhoto
     app.put("/group/:groupSlug/coverPhoto", async (req, res) => {
       const groupSlug = req.params.groupSlug;
@@ -186,8 +180,52 @@ async function run() {
       group.groupCoverPhoto = req.body.groupCoverPhoto;
       const result = await groupsCollection.updateOne(query, { $set: group });
       res.send(result);
-    }),
-
+    });
+    //update group post likes
+    app.put("/group/:groupSlug/post/:postId", async (req, res) => {
+      const groupSlug = req.params.groupSlug;
+      const query = { groupSlug: groupSlug };
+      const group = await groupsCollection.findOne(query);
+      const postId = req.params.postId;
+      const post = group.groupPosts.find((post) => post._id == postId);
+      const email = req.body.email;
+      post.postLikes.push(email);
+      const result = await groupsCollection.updateOne(query, { $set: group });
+      res.send(result);
+    });
+    //check is this user email already exist in postLikes array in groupPosts
+    app.get("/group/:groupSlug/post/:postId/checkLike/:email", async (req, res) => {
+      const groupSlug = req.params.groupSlug;
+      const query = { groupSlug: groupSlug };
+      const group = await groupsCollection.findOne(query);
+      const postId = req.params.postId;
+      const post = group.groupPosts.find((post) => post._id == postId);
+      const email = req.params.email;
+      const result = post.postLikes.includes(email);
+      res.send(result);
+    });
+    //delete email from postLikes array
+    app.put("/group/:groupSlug/post/:postId/deleteLike", async (req, res) => {
+      const groupSlug = req.params.groupSlug;
+      const query = { groupSlug: groupSlug };
+      const group = await groupsCollection.findOne(query);
+      const postId = req.params.postId;
+      const post = group.groupPosts.find((post) => post._id == postId);
+      const email = req.body.email;
+      const index = post.postLikes.indexOf(email);
+      post.postLikes.splice(index, 1);
+      const result = await groupsCollection.updateOne(query, { $set: group });
+      res.send(result);
+    });
+    //get group post by _id
+    app.get("/group/:groupSlug/post/:postId", async (req, res) => {
+      const groupSlug = req.params.groupSlug;
+      const query = { groupSlug: groupSlug };
+      const group = await groupsCollection.findOne(query);
+      const postId = req.params.postId;
+      const post = group.groupPosts.find((post) => post._id == postId);
+      res.send(post);
+    })
 
 
 
@@ -210,7 +248,6 @@ async function run() {
       res.send(comments);
     });
 
-
     // post a request to add friend
     app.post("/friendRequest", async (req, res) => {
       const request = req.body;
@@ -232,53 +269,49 @@ async function run() {
     app.get("/friendRequests", async (req, res) => {
       const requests = await friendRequestCollection.find({}).toArray();
       res.send(requests);
-    })
+    });
     //get requests by receiver email
     app.get("/friendRequests/:receiverEmail", async (req, res) => {
       const receiverEmail = req.params.receiverEmail;
       const query = { receiverEmail: receiverEmail };
       const requests = await friendRequestCollection.find(query).toArray();
       res.send(requests);
-    })
+    });
     // delete friend request
-    app.delete("/acceptFriendRequest/:senderEmail/:receiverEmail", async (req, res) => {
-      const senderEmail = req.params.senderEmail;
-      const receiverEmail = req.params.receiverEmail;
-      const query = {
-        senderEmail: senderEmail,
-        receiverEmail: receiverEmail,
-      };
-      const result = await friendRequestCollection.deleteOne(query);
-      res.send(result);
-    })
+    app.delete(
+      "/acceptFriendRequest/:senderEmail/:receiverEmail",
+      async (req, res) => {
+        const senderEmail = req.params.senderEmail;
+        const receiverEmail = req.params.receiverEmail;
+        const query = {
+          senderEmail: senderEmail,
+          receiverEmail: receiverEmail,
+        };
+        const result = await friendRequestCollection.deleteOne(query);
+        res.send(result);
+      }
+    );
     // push an email to friends array
     app.put("/pushFriend/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       const updateDoc = {
-        $set:  req.body,
+        $set: req.body,
       };
-      const result = await usersCollection.updateOne(
-        query,
-        updateDoc
-      );
+      const result = await usersCollection.updateOne(query, updateDoc);
       res.send(result);
-    })
+    });
 
-
-    //update like 
+    //update like
     app.put("/like/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const updateDoc = {
-        $set:  req.body,
+        $set: req.body,
       };
-      const result = await postsCollection.updateOne(
-        query,
-        updateDoc
-      );
+      const result = await postsCollection.updateOne(query, updateDoc);
       res.send(result);
-    })
+    });
     //check is this user email already exist in postLikes array
     app.get("/like/:id/:email", async (req, res) => {
       const id = req.params.id;
@@ -287,7 +320,7 @@ async function run() {
       const post = await postsCollection.findOne(query);
       const result = post.postLikes.includes(email);
       res.send(result);
-    })
+    });
     //delete email from postLikes array
     app.delete("/like/:id/:email", async (req, res) => {
       const id = req.params.id;
@@ -298,11 +331,17 @@ async function run() {
       post.postLikes.splice(index, 1);
       const result = await postsCollection.updateOne(query, { $set: post });
       res.send(result);
-    })
+    });
+
+    //delete post by id
+    app.delete("/post/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await postsCollection.deleteOne(query);
+      res.send(result);
+    });
 
     console.log("Connected to MongoDB");
-
-
   } finally {
   }
 }
